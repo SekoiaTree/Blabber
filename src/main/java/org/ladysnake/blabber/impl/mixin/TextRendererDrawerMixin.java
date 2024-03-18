@@ -2,7 +2,6 @@ package org.ladysnake.blabber.impl.mixin;
 
 import net.minecraft.text.Style;
 import org.ladysnake.blabber.impl.common.richtext.FakeFontStorage;
-import org.ladysnake.blabber.impl.common.richtext.RichOrderedText;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

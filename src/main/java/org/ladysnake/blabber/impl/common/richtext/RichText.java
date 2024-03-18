@@ -5,7 +5,7 @@ import net.minecraft.text.*;
 import java.util.Collections;
 import java.util.List;
 
-public record RichText(RichOrderedText interior) implements Text {
+public record RichText implements Text {
     @Override
     public Style getStyle() {
         return Style.EMPTY;
@@ -23,6 +23,6 @@ public record RichText(RichOrderedText interior) implements Text {
 
     @Override
     public OrderedText asOrderedText() {
-        return interior;
+        // TODO: 2/20/24
     }
 }

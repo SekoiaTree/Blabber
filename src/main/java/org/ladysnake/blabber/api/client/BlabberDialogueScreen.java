@@ -34,7 +34,6 @@ import org.ladysnake.blabber.api.DialogueIllustration;
 import org.ladysnake.blabber.impl.common.DialogueScreenHandler;
 import org.ladysnake.blabber.impl.common.machine.AvailableChoice;
 import org.ladysnake.blabber.impl.common.model.ChoiceResult;
-import org.ladysnake.blabber.impl.common.richtext.RichOrderedText;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
