@@ -38,10 +38,7 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.SimpleRegistry;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
 import org.ladysnake.blabber.Blabber;
 import org.ladysnake.blabber.api.DialogueActionV2;
 import org.ladysnake.blabber.api.illustration.DialogueIllustrationType;
@@ -57,8 +54,6 @@ import org.ladysnake.blabber.impl.common.settings.BlabberSettingsComponent;
 import org.ladysnake.cca.api.v3.entity.EntityComponentFactoryRegistry;
 import org.ladysnake.cca.api.v3.entity.EntityComponentInitializer;
 import org.ladysnake.cca.api.v3.entity.RespawnCopyStrategy;
-import org.ladysnake.blabber.impl.common.richtext.TextComponentRenderer;
-import org.ladysnake.blabber.impl.common.richtext.TextComponentType;
 
 import java.util.Optional;
 import java.util.Set;
@@ -72,12 +67,6 @@ public final class BlabberRegistrar implements EntityComponentInitializer {
     public static final RegistryKey<Registry<DialogueIllustrationType<?>>> ILLUSTRATION_REGISTRY_KEY = RegistryKey.ofRegistry(Blabber.id("dialogue_illustrations"));
     public static final Registry<DialogueIllustrationType<?>> ILLUSTRATION_REGISTRY = FabricRegistryBuilder.from(
             new SimpleRegistry<>(ILLUSTRATION_REGISTRY_KEY, Lifecycle.stable(), false)
-    ).buildAndRegister();
-
-    public static final RegistryKey<Registry<TextComponentType<?>>> TEXT_COMPONENT_REGISTRY_KEY = RegistryKey.ofRegistry(Blabber.id("text_component"));
-
-    public static final Registry<TextComponentType<?>> TEXT_COMPONENT_REGISTRY = FabricRegistryBuilder.from(
-            new SimpleRegistry<>(TEXT_COMPONENT_REGISTRY_KEY, Lifecycle.stable(), false)
     ).buildAndRegister();
 
     public static final RegistryKey<Registry<DialogueLayoutType<?>>> LAYOUT_REGISTRY_KEY = RegistryKey.ofRegistry(Blabber.id("dialogue_layouts"));

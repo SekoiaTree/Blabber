@@ -7,8 +7,6 @@
     "EntitySelectorMixin",
     "EntitySelectorReaderMixin",
     "TextRendererDrawerMixin",
-    "ITextRendererDrawer",
-    "compat.emi.EmiScreenManagerMixin",
     "PlayerEntityAccessor",
     "PlayerManagerMixin"
   ],

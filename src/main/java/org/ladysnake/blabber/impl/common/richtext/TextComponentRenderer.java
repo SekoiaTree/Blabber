@@ -1,9 +1,9 @@
 package org.ladysnake.blabber.impl.common.richtext;
 
-import org.ladysnake.blabber.impl.mixin.ITextRendererDrawer;
+import net.minecraft.client.render.VertexConsumer;
+import org.joml.Matrix4f;
 
+@FunctionalInterface
 public interface TextComponentRenderer {
-    void render(ITextRendererDrawer textRendererDrawer);
-
-    TextComponentType<?> getType();
+    void draw(boolean italic, float x, float y, Matrix4f matrix, VertexConsumer vertexConsumer, float red, float green, float blue, float alpha, int light);
 }
