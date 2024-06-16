@@ -19,9 +19,6 @@ package org.ladysnake.blabber.impl.common;
 
 import com.google.common.base.Preconditions;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import dev.onyxstudios.cca.api.v3.component.ComponentKey;
-import dev.onyxstudios.cca.api.v3.component.ComponentRegistry;
-import dev.onyxstudios.cca.api.v3.component.tick.ServerTickingComponent;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,6 +28,7 @@ import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -38,7 +36,10 @@ import org.jetbrains.annotations.Nullable;
 import org.ladysnake.blabber.Blabber;
 import org.ladysnake.blabber.impl.common.machine.DialogueStateMachine;
 import org.ladysnake.blabber.impl.common.model.DialogueTemplate;
-import org.ladysnake.blabber.impl.common.packets.ChoiceAvailabilityPacket;
+import org.ladysnake.blabber.impl.common.packets.ChoiceAvailabilityPayload;
+import org.ladysnake.cca.api.v3.component.ComponentKey;
+import org.ladysnake.cca.api.v3.component.ComponentRegistry;
+import org.ladysnake.cca.api.v3.component.tick.ServerTickingComponent;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -63,15 +64,16 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
     public void startDialogue(Identifier id, @Nullable Entity interlocutor) throws CommandSyntaxException {
         DialogueTemplate template = DialogueRegistry.getOrEmpty(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown dialogue " + id));
-        this.startDialogue0(
+        DialogueStateMachine currentDialogue = this.startDialogue0(
                 id,
                 template,
                 template.start(),
                 interlocutor
         );
+        currentDialogue.getStartAction().ifPresent(a -> a.action().handle((ServerPlayerEntity) this.player, interlocutor));
     }
 
-    private void startDialogue0(Identifier id, DialogueTemplate template, @Nullable String start, @Nullable Entity interlocutor) throws CommandSyntaxException {
+    private DialogueStateMachine startDialogue0(Identifier id, DialogueTemplate template, @Nullable String start, @Nullable Entity interlocutor) throws CommandSyntaxException {
         ServerPlayerEntity serverPlayer = ((ServerPlayerEntity) this.player);
         this.interlocutor = interlocutor;
         try {
@@ -79,6 +81,7 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
             this.currentDialogue = new DialogueStateMachine(id, parsedTemplate, start);
             this.updateConditions(serverPlayer, this.currentDialogue);
             this.openDialogueScreen();
+            return this.currentDialogue;
         } catch (CommandSyntaxException e) {
             this.interlocutor = null;
             throw e;
@@ -109,7 +112,7 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
             this.endDialogue();
 
             DialogueRegistry.getOrEmpty(oldDialogue.getId())
-                    .ifPresent(template -> this.tryStartDialogue(
+                    .ifPresent(template -> this.tryResumeDialogue(
                             oldDialogue.getId(),
                             template,
                             oldDialogue.getCurrentStateKey(),
@@ -119,7 +122,7 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
     }
 
     @Override
-    public void readFromNbt(NbtCompound tag) {
+    public void readFromNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         if (tag.contains("current_dialogue_id", NbtElement.STRING_TYPE)) {
             Identifier dialogueId = Identifier.tryParse(tag.getString("current_dialogue_id"));
             if (dialogueId != null) {
@@ -134,7 +137,7 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
     }
 
     @Override
-    public void writeToNbt(NbtCompound tag) {
+    public void writeToNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         if (this.currentDialogue != null) {
             tag.putString("current_dialogue_id", this.currentDialogue.getId().toString());
             tag.putString("current_dialogue_state", this.currentDialogue.getCurrentStateKey());
@@ -157,7 +160,7 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
                 } else {
                     interlocutor = null;
                 }
-                tryStartDialogue(saved.dialogueId(), saved.template(), saved.selectedState(), interlocutor);
+                tryResumeDialogue(saved.dialogueId(), saved.template(), saved.selectedState(), interlocutor);
             }
             this.resumptionAttempts = 0;
             this.deserializedState = null;
@@ -173,23 +176,27 @@ public final class PlayerDialogueTracker implements ServerTickingComponent {
                 }
             }
 
-            ChoiceAvailabilityPacket update = this.updateConditions(serverPlayer, this.currentDialogue);
+            try {
+                ChoiceAvailabilityPayload update = this.updateConditions(serverPlayer, this.currentDialogue);
 
-            if (update != null) {
-                ServerPlayNetworking.send(serverPlayer, update);
+                if (update != null) {
+                    ServerPlayNetworking.send(serverPlayer, update);
+                }
+            } catch (CommandSyntaxException e) {
+                throw new IllegalStateException("Error while updating dialogue conditions", e);
             }
         }
     }
 
-    private void tryStartDialogue(Identifier id, DialogueTemplate template, String selectedState, Entity interlocutor) {
+    private void tryResumeDialogue(Identifier id, DialogueTemplate template, String selectedState, Entity interlocutor) {
         try {
             this.startDialogue0(id, template, selectedState, interlocutor);
         } catch (CommandSyntaxException e) {
-            Blabber.LOGGER.error("(Blabber) Failed to load dialogue template " + id, e);
+            Blabber.LOGGER.error("(Blabber) Failed to load dialogue template {}", id, e);
         }
     }
 
-    private @Nullable ChoiceAvailabilityPacket updateConditions(ServerPlayerEntity player, DialogueStateMachine currentDialogue) {
+    private @Nullable ChoiceAvailabilityPayload updateConditions(ServerPlayerEntity player, DialogueStateMachine currentDialogue) throws CommandSyntaxException {
         if (currentDialogue.hasConditions()) {
             return currentDialogue.updateConditions(new LootContext.Builder(
                     new LootContextParameterSet.Builder(player.getServerWorld())

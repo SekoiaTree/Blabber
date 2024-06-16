@@ -18,7 +18,7 @@
 package org.ladysnake.blabber;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.Entity;
@@ -30,14 +30,22 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import org.ladysnake.blabber.api.DialogueActionV2;
-import org.ladysnake.blabber.api.DialogueIllustrationType;
-import org.ladysnake.blabber.impl.common.*;
+import org.ladysnake.blabber.api.illustration.DialogueIllustrationType;
+import org.ladysnake.blabber.api.layout.DialogueLayoutType;
+import org.ladysnake.blabber.impl.common.BlabberRegistrar;
+import org.ladysnake.blabber.impl.common.CommandDialogueAction;
+import org.ladysnake.blabber.impl.common.DialogueInitializationException;
+import org.ladysnake.blabber.impl.common.PlayerDialogueTracker;
+import org.ladysnake.blabber.impl.common.commands.BlabberCommand;
 import org.ladysnake.blabber.impl.common.illustrations.DialogueIllustrationCollection;
 import org.ladysnake.blabber.impl.common.illustrations.DialogueIllustrationItem;
-import org.ladysnake.blabber.impl.common.illustrations.DialogueIllustrationNbtEntity;
-import org.ladysnake.blabber.impl.common.illustrations.DialogueIllustrationSelectorEntity;
+import org.ladysnake.blabber.impl.common.illustrations.DialogueIllustrationTexture;
+import org.ladysnake.blabber.impl.common.illustrations.entity.DialogueIllustrationFakePlayer;
+import org.ladysnake.blabber.impl.common.illustrations.entity.DialogueIllustrationNbtEntity;
+import org.ladysnake.blabber.impl.common.illustrations.entity.DialogueIllustrationSelectorEntity;
 import org.ladysnake.blabber.impl.common.machine.DialogueStateMachine;
 
 public final class Blabber implements ModInitializer {
@@ -45,7 +53,7 @@ public final class Blabber implements ModInitializer {
 	public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
 	public static Identifier id(String path) {
-		return new Identifier(MOD_ID, path);
+		return Identifier.of(MOD_ID, path);
 	}
 
 	/**
@@ -110,10 +118,10 @@ public final class Blabber implements ModInitializer {
 	 *
 	 * @param actionId the identifier used to reference the action in dialogue definition files
 	 * @param action   the action to run when triggered by a player
-	 * @see #registerAction(Identifier, Codec)
+	 * @see #registerAction(Identifier, MapCodec)
 	 */
 	public static void registerAction(Identifier actionId, DialogueAction action) {
-		registerAction(actionId, Codec.unit(action));
+		registerAction(actionId, MapCodec.unit(action));
 	}
 
 	/**
@@ -121,10 +129,10 @@ public final class Blabber implements ModInitializer {
 	 *
 	 * @param actionId the identifier used to reference the action in dialogue definition files
 	 * @param action   the action to run when triggered by a player
-	 * @see #registerAction(Identifier, Codec)
+	 * @see #registerAction(Identifier, MapCodec)
 	 */
 	public static void registerAction(Identifier actionId, DialogueActionV2 action) {
-		registerAction(actionId, Codec.unit(action));
+		registerAction(actionId, MapCodec.unit(action));
 	}
 
 	/**
@@ -134,7 +142,7 @@ public final class Blabber implements ModInitializer {
 	 * @param codec    a codec for deserializing dialogue actions using the given value
 	 * @see #registerAction(Identifier, DialogueAction)
 	 */
-	public static void registerAction(Identifier actionId, Codec<? extends DialogueActionV2> codec) {
+	public static void registerAction(Identifier actionId, MapCodec<? extends DialogueActionV2> codec) {
 		Registry.register(BlabberRegistrar.ACTION_REGISTRY, actionId, codec);
 	}
 
@@ -148,14 +156,29 @@ public final class Blabber implements ModInitializer {
 		Registry.register(BlabberRegistrar.ILLUSTRATION_REGISTRY, illustrationId, type);
 	}
 
+	/**
+	 * Register a configurable {@link DialogueLayoutType} to handle the general look of a dialogue.
+	 *
+	 * @param layoutId the identifier used to reference the layout type in dialogue definition files
+	 * @param type           the dialogue layout type
+	 */
+	@ApiStatus.Experimental
+	public static void registerLayout(Identifier layoutId, DialogueLayoutType<?> type) {
+		Registry.register(BlabberRegistrar.LAYOUT_REGISTRY, layoutId, type);
+	}
+
 	@Override
 	public void onInitialize() {
 		BlabberRegistrar.init();
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BlabberCommand.register(dispatcher));
 		registerAction(id("command"), CommandDialogueAction.CODEC);
+		registerLayout(id("classic"), BlabberRegistrar.CLASSIC_LAYOUT);
+		registerLayout(id("rpg"), BlabberRegistrar.RPG_LAYOUT);
 		registerIllustration(id("group"), DialogueIllustrationCollection.TYPE);
 		registerIllustration(id("item"), DialogueIllustrationItem.TYPE);
 		registerIllustration(id("fake_entity"), DialogueIllustrationNbtEntity.TYPE);
+		registerIllustration(id("fake_player"), DialogueIllustrationFakePlayer.TYPE);
 		registerIllustration(id("entity"), DialogueIllustrationSelectorEntity.TYPE);
+		registerIllustration(id("texture"), DialogueIllustrationTexture.TYPE);
 	}
 }

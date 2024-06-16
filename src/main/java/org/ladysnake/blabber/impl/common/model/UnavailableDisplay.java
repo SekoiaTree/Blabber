@@ -18,12 +18,18 @@
 package org.ladysnake.blabber.impl.common.model;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.util.StringIdentifiable;
 
 public enum UnavailableDisplay implements StringIdentifiable {
     GRAYED_OUT("grayed_out"), HIDDEN("hidden");
 
     public static final Codec<UnavailableDisplay> CODEC = StringIdentifiable.createCodec(UnavailableDisplay::values);
+    public static final PacketCodec<PacketByteBuf, UnavailableDisplay> PACKET_CODEC = PacketCodec.ofStatic(
+            PacketByteBuf::writeEnumConstant,
+            buf -> buf.readEnumConstant(UnavailableDisplay.class)
+    );
 
     private final String id;
 

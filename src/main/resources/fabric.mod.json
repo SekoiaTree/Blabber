@@ -29,11 +29,18 @@
       "org.ladysnake.blabber.impl.common.BlabberRegistrar"
     ],
     "rei_client": [
-      "org.ladysnake.blabber.impl.compat.BlabberReiClientPlugin"
+      "org.ladysnake.blabber.impl.client.compat.BlabberReiClientPlugin"
+    ],
+    "jei_mod_plugin": [
+      "org.ladysnake.blabber.impl.client.compat.BlabberJeiClientPlugin"
     ]
   },
   "mixins": [
-    "blabber.mixins.json"
+    "blabber.mixins.json",
+    {
+      "config": "blabber.client.mixins.json",
+      "environment": "client"
+    }
   ],
 
   "depends": {
@@ -45,7 +52,8 @@
   },
   "custom": {
     "cardinal-components": [
-      "blabber:dialogue_tracker"
+      "blabber:dialogue_tracker",
+      "blabber:settings"
     ]
   }
 }

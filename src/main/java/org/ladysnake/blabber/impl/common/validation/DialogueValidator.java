@@ -52,9 +52,13 @@ public final class DialogueValidator {
                     );
                 }
             }
-            // TODO Java 21 replace with pattern matching switch to handle all possible results
-            if (validateIllustrations(dialogue, state) instanceof ValidationResult.Error error) {
-                return error;
+
+            switch (validateIllustrations(dialogue, state)) {
+                case ValidationResult.Error error -> {
+                    return error;
+                }
+                case ValidationResult.Success ignored -> {}
+                case ValidationResult.Warnings ignored -> {}
             }
         }
 
@@ -90,11 +94,6 @@ public final class DialogueValidator {
             } else {
                 return new ValidationResult.Error.SoftLock(bad.getKey());
             }
-        }
-
-        // Verify that all illustrations are real. We're doing this here because this is a class and not a record
-        // So we have our own constructor.
-        for (Map.Entry<String, DialogueState> state : dialogue.states().entrySet()) {
         }
 
         return warnings.isEmpty() ? ValidationResult.success() : new ValidationResult.Warnings(warnings);
